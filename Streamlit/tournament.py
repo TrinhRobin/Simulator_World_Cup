@@ -5,8 +5,8 @@ import seaborn as sns
 from util import feature_engineering,Team, Match, Group_Stage
 
 #Load data 
-df_results = pd.read_csv("../data/results.csv")
-df_elo = pd.read_csv("../data/elo_ratings_team.csv", sep='\t',index_col=0)
+df_results = pd.read_csv("Streamlit/results.csv")
+df_elo = pd.read_csv("Streamlit/elo_ratings_team.csv", sep='\t',index_col=0)
 df_elo =df_elo.replace({'United States\tUSA':'United States'})
 df_test = feature_engineering(df_elo,df_results)
 
