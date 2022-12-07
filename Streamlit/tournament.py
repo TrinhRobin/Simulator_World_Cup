@@ -18,7 +18,7 @@ if page == pages[0]:
     st.header("World Cup Simulator")
     st.title("For the Demo Streamlit Masterclass")
     st.subheader('By the Datascientest team')
-    st.image('Fifa_WC_2022.png')
+    st.image('Streamlit/Fifa_WC_2022.png')
     st.markdown("From the original project from [A Mathematician Guide from the World Cup](https://youtu.be/KjISuZ5o06Q)")
     st.markdown("You may find more details about the implementation on this [Github Account](https://github.com/TrinhRobin/Simulator_World_Cup)")
     st.video("https://youtu.be/KjISuZ5o06Q")
