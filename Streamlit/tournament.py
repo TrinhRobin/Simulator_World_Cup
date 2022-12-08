@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from util import feature_engineering,Team, Match, Group_Stage
+from util import feature_engineering,Team, Match, Group_Stage, Tournament
 
 #Load data 
 df_results = pd.read_csv("Streamlit/results.csv")
@@ -107,10 +107,35 @@ if page == pages[3]:
 
 if page == pages[4]:
     st.markdown('# Modeling 3 : Simulate the Tournament')
-    st.header("The final results of the model based on Monte Carlo Simulation (for N = 50 simulations) : ") 
+    st.header("The final results of the model based on Monte Carlo Simulation : ") 
+    simulate = st.button("Simulate The Tournament!")
+    if simulate:
+       
+        t = Tournament(df_test,[
+              ['Qatar','Netherlands' ,'Senegal','Ecuador'],
+              ['England','United States','Iran','Wales'],
+              ['Argentina','Poland','Mexico','Saudi Arabia'],
+              ['France','Denmark','Tunisia','Australia'],
+              ['Spain','Japan','Germany','Costa Rica'],
+              ['Belgium','Croatia','Morocco','Canada'],
+              ['Brazil','Switzerland','Serbia','Cameroon'],
+              ['Portugal','Uruguay','South Korea','Ghana']])
+
+        st.markdown(f"# Here is The winner of the tournament (for 10 simulations)")
+
+        df_res = pd.DataFrame(t.main(),index=[1]).transpose().reset_index()
+        df_res.columns = ['country','Wins']
+        
+        fig_res =plt.figure()
+        sns.barplot(y='country',x='Wins',data=df_res.sort_values('Wins',ascending=False) )
+        plt.title("World Cup Simulator Result");
+        st.pyplot(fig_res)
+        st.markdown("# Final Results:")
+        st.image('Streamlit/simul_50.png',caption=" As it tooks some time, here are the results for 50 simulations ",width=400)
+
+
     #st.image('ouput.png')
-    st.write("There is still improvements to be made... don' you think ;) ?")
-    
+    st.write("There is still improvements to be made... don't you think ;) ?")
 
 
 
