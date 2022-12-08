@@ -16,13 +16,13 @@ page = st.sidebar.radio("Choose a page",options =pages)
 
 if page == pages[0]:
     st.header("World Cup Simulator")
-    st.title("For the Demo Streamlit Masterclass")
-    st.subheader('By the Datascientest team')
+    st.title("To illustrate the features of streamlit")
+    st.subheader('A personnal Project based on Oxford Mathematics ')
     st.image('Streamlit/Fifa_WC_2022.png')
-    st.markdown("From the original project from [A Mathematician Guide from the World Cup](https://youtu.be/KjISuZ5o06Q)")
+    st.markdown("From the initial methodology shown in [A Mathematician Guide from the World Cup](https://youtu.be/KjISuZ5o06Q)")
     st.markdown("You may find more details about the implementation on this [Github Account](https://github.com/TrinhRobin/Simulator_World_Cup)")
     st.video("https://youtu.be/KjISuZ5o06Q")
-    st.write("Some insights about the dataframe used in this project:")
+    st.write("Some insights about the dataframe used for the modelization:")
     st.dataframe(df_test.head())
 if page == pages[1]:
     st.header("Hypothesis 1 : The XG difference depends on ratings difference")
@@ -133,8 +133,6 @@ if page == pages[4]:
         st.markdown("# Final Results:")
         st.image('Streamlit/simul_50.png',caption=" As it tooks some time, here are the results for 50 simulations ",width=400)
 
-
-    #st.image('ouput.png')
     st.write("There is still improvements to be made... don't you think ;) ?")
 
 

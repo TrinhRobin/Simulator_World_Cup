@@ -30,41 +30,47 @@ def feature_engineering(dataframe_elo_score,dataframe_game_results,date_bounds=[
     Inputs : 
         dataframe_elo_score = pandas Dataframe with list of teams, their elo_score rating), rank, and various informations
         dataframe_game_results = pandas Dataframe with results of games: Home Team, Away Team, Goal Home, Goal Away .... (from kaggle)
-    Output : we compute additional fatires,mainly the XG of each team, and add additional these features by merging the dataframes
+        tournment_list = List of the tournaments that will remain in the final dataframe, the other ones (mostly minor competitions will not be considered)
+    Output : we filter, clean and compute additional features,mainly the XG of each team, and add these additional features by merging the two dataframes
     """
     
     #filter by date
     dataframe_game_results2 =dataframe_game_results[(dataframe_game_results['date']>=date_bounds[0])
                                                     &(dataframe_game_results['date']<date_bounds[1])]
-    #filtre tournois
+    #filter tournaments
     dataframe_game_results2  = dataframe_game_results2[dataframe_game_results2['tournament'].isin(tournaments_list)]
     
-    #We create all the couples Team A vs Team B :
+    #We create all the couples Team A vs Team B for Home Game:
     df1 = dataframe_game_results2[['home_team','home_score']]
     df1 = df1.rename(columns={'home_team':'team','home_score':'score'})
+     #We create all the couples Team A vs Team B for Away Game:
     df2 = dataframe_game_results2[['away_team','away_score']]
     df2= df2.rename(columns={'away_team':'team','away_score':'score'})
-
+    
+    #Concate
     df_xg1 = pd.concat([df1,df2],axis=0)
     df_xg1 =df_xg1.reset_index(drop=True)
+    #Are there any NaN values?
     df_xg1.isna().sum()
-    #drop na
+    #dropping NaN values #or replacing with fillna(0)?
     df_xg1 = df_xg1.dropna()
-    #ou fillna(0)
+    #Checking that there are not nan Values remaining
     df_xg1.isna().sum()
-    
+    #Computing the XG = mean goals over the last games 
     df_extract = df_xg1.groupby('team').agg(score = ('score','mean'),
                                              nb_match= ('score','count'))
-    #how=left
+    #Merging The two dataframes
     df_features =dataframe_elo_score.merge(df_extract ,how='inner',left_on='Team_Name',right_on='team')
 
     df_couples = pd.DataFrame(list(product(dataframe_elo_score['Team_Name'], dataframe_elo_score['Team_Name'])),columns=['Team_A','Team_B'])
+    #Removing the couples Team A vs Team B where they are the same
     df_couples=df_couples[df_couples['Team_A']!= df_couples['Team_B']]
     df_couples = df_couples.merge(df_features[['Rank_Team','Rating','Team_Name','score']],left_on='Team_A',right_on='Team_Name')
     df_couples = df_couples.merge(df_features[['Rank_Team','Rating','Team_Name','score']],left_on='Team_B',right_on='Team_Name',suffixes=('_A', '_B'))
     #suffixes=('_x', '_y')
     df_couples=df_couples.drop( columns=['Team_Name_A','Team_Name_B'])
-    
+    #Computing the TWO MAIN FEATURES (which we will used in our model) : XG RATE difference (between team A and team B)
+    #And ELO Rating difference = Difference of Rank/Power between Team A and Team B
     df_couples['XG_difference'] = df_couples['score_A'] - df_couples['score_B']
     df_couples['Rating_difference']=df_couples['Rating_A'] - df_couples['Rating_B']
     return(df_couples)
@@ -72,29 +78,45 @@ def feature_engineering(dataframe_elo_score,dataframe_game_results,date_bounds=[
 
 def compute_XG_diff_mean_std(dataframe,equipe1,equipe2,bound=0.25):
     """
-    Computing the XG difference between equipe1 and equipe2
-    By sampling mean and standard deviation from a subset of dataframe
-    (Hypothesis : The XG_differences between teams with about the same elo ratings follow a normal law)
+    Input : dataframe : pandas DataFrame, the result from the feature_engineering function
+    equipe1, equipe 2 = str , names of Team A and Team B
+    bound = float between 0 and 1, Determines the range of the sample (from which we extract the mean and the standard deviation)
+    Output : Computing the XG difference between equipe1 and equipe2
+    By sampling mean and standard deviation from a subset of dataframe,( = the games between teams about the same ELO ratings difference as equipe1 and equipe1)
+    (Hypothesis : The XG_differences between teams with about the same elo ratings follow a normal distribution)
     """
+    #A Team cannot play against itself 
     if equipe1 == equipe2:
         return("Error : same team")
     elo_diff = dataframe.loc[(dataframe['Team_A']==equipe1)
                              &(dataframe['Team_B']==equipe2),'Rating_difference'].values
     #Predict XG_difference :
     #mean = model.predict(elo_diff.reshape(-1, 1) 
-    #changer interval autour duquel on sample XG_difference
+    #We select a subset of the historical games based on the parameter bound (those between Teams whose Elo Ratings Difference is about the same as the two teams in inputs) from which we sample the mean and the standard
     #print(elo_diff)
     sample = dataframe.loc[(dataframe['Rating_difference']<=max(elo_diff[0]*(1+bound),elo_diff[0]*(1-bound)))&
                       ( dataframe['Rating_difference']>=min(elo_diff[0]*(1+bound),elo_diff[0]*(1-bound))),'XG_difference']
-    mean = sample.mean()
-    variance  =sample.std()
-    #print(mean,variance)
-    return(mean,variance)
+    #Computing the mean and the standard deviation from the dataframe's subset
+    sample_mean = sample.mean()
+    sample_std  =sample.std()
+    return(sample_mean,sample_std)
 
-#Ajouter champ meilleur joeur, XG_meilleur_joueur et blessure 
-#A chaque match on tire au hasard un dé pour savir si reisque de blessure
-#si oui on retire les XG joueur au XG_equipe
+#TO DO
+#Add best player field, XG_best_player and injury 
+#At each game we draw a random die to determine an injury event 
+#if yes we remove the XG player to the XG_team
 class Team:
+    """
+    A football Team
+    Attributes :
+        name : str
+        xg : float Expected Goals (how many goals this team is expected to score)
+        elo_ranking : float ELO represents the strength/reputation of the Team
+        results : dictionnary which stores this teams results
+    Methods :
+        init
+        print
+    """
     def __init__(self, team_name,XG ,elo_ranking):
             self.name = team_name
             self.xg = XG
@@ -103,8 +125,21 @@ class Team:
     def __str__(self):
         return(f"Team {self.name}: \n XG : {self.xg} \n ELO Ranking : {self.elo_ranking} \n Current Results : {self.results}")
 
-#rajouter champa data ou fonction compute ? 
+
 class Match:
+    """
+    Simulate a Football Game between two Teams
+    Attributes :
+        team A: Team The first Team
+        team B : Team The opponent Team
+        diff_xg_mean : Float difference of XG rates of the two Teams
+        is_round_robin : Boolean whether or not This match is from the group stage (True) or from the Final Stage (False)
+        winner = Team  The winning Team
+    Methods :
+        init
+        print
+        simulate_match : Sample N_samples *2 Poisson Laws and average the result for computing probabilities of Win/Draw/Loss
+    """
     def __init__(self, team_A, team_B,dataframe, is_round_robin,N_samples=1000):
         self.team_A = team_A
         self.team_B = team_B
@@ -154,12 +189,12 @@ class Match:
                 self.team_A.results["Points"]+=1
                 self.team_B.results["Points"]+=1
             elif not self.is_round_robin :
-                ##Penaltuy shoothout 
+                #During the Final Stage ->Penalty shoothout = Head or Tail 
                 self.winner = np.random.choice([self.team_A,self.team_B])
             self.team_A.results["Draw"]+=1
             self.team_B.results['Draw']+=1
             
-        #rajouter int?
+        #To Do : Adding int() to round these quantitie and have integer values for number of goals
         self.team_A.results['Goals']=  np.mean([ score[0] for score in simul_results])
         self.team_A.results['Goals_Against']= np.mean([ score[1] for score in simul_results])
         self.team_B.results['Goals']= np.mean([ score[1] for score in simul_results])
@@ -177,6 +212,16 @@ class Match:
 # 4 - Random Sample      
 
 class Group_Stage:
+    """
+    A Group Stage between 4 Teams = 2*3 Match
+    Attributes :
+        first_qualified : Team Winner of the Group Stage
+        second_qualified : Team The Team whose final rank is 2
+        teams = list the liste of the 4 Teams of the Group
+    Methods:
+        reset : initialize the games results (= beginning of the tournament)
+        play_group_stage : play the 3 games for each Teams and rank them to see which Teams has qualified for the next round
+    """
     def __init__(self, teams,dataframe):
         self.first_qualified = None
         self.second_qualified = None
@@ -189,15 +234,25 @@ class Group_Stage:
 
     def play_group_stage(self,dataframe):
         [Match(self.teams[i], self.teams[j],dataframe, True,1000) for i in range(0, len(self.teams))  for j in range(i + 1, len(self.teams))]
-        #Sorting the teamns           
+        #Sorting the teams           
         self.teams.sort(key= lambda elem : (elem.results['Points'],elem.results['Goals']-elem.results['Goals_Against'],elem.results['Goals'],
                                             np.random.rand()) ,reverse=True)
+         #Store the two qualified Teams
         self.first_qualified = self.teams[0]
         self.second_qualified = self.teams[1]
 
 class Tournament :
     """
     Simulate the whole Tournament !
+    Attributes :
+        all_teams = list of 32 Teams = participants to the Tournmanent
+        groups = list of 8 group stages
+        data = pandas Dataframe we store the data necessary to computing the XG difference betwee each teams
+    method :
+        init
+        print
+        simul_one_tournament : simulate one tournament: Group Stage and Final Stage
+        main : Iterates simul_one_tournament n times 
     """
     def __init__(self,dataframe,groups_list):
         #dictionary {team_name str : team Team Object}
