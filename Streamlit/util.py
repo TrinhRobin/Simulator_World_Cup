@@ -194,3 +194,48 @@ class Group_Stage:
                                             np.random.rand()) ,reverse=True)
         self.first_qualified = self.teams[0]
         self.second_qualified = self.teams[1]
+
+class Tournament :
+    """
+    Simulate the whole Tournament !
+    """
+    def __init__(self,dataframe,groups_list):
+        #dictionary {team_name str : team Team Object}
+        self.all_teams = { team : Team(team, dataframe.loc[dataframe['Team_A']==team,'score_A'].mode()[0],
+         dataframe.loc[dataframe['Team_A']==team,'Rating_A'].mode()[0] ) for team in dataframe['Team_A'].unique()}
+        self.groups = groups_list
+        self.data = dataframe
+
+    def simul_one_tournament(self,winners):
+        # Play round robin
+        #Simulate all Group stages
+        Groups =[Group_Stage([ self.all_teams[teams_group] for teams_group in group],self.data) for group in self.groups]
+
+        # Play final elimination  phase 
+           
+        huitiemes = [(Match(Groups[2*i].first_qualified,Groups[2*i+1].second_qualified,
+                                self.data,
+                                False ,1000),
+                          Match(Groups[2*i].second_qualified,Groups[2*i+1].first_qualified,self.data ,False,1000))
+                         for i in range(int(len(self.groups)/2))]
+             # Quarters
+
+        quarters = [Match(quart_finalist[0].winner,quart_finalist[1].winner,self.data,False ) for quart_finalist in huitiemes ]
+           
+            # Semifinals
+        semis = [Match(quarters[2*i].winner,quarters[2*i+1].winner,self.data,False,1000 ) for i in range(2)]
+            # Final
+        winner_final = Match(semis[0].winner ,semis[1].winner,self.data, False,1000)
+        winner =winner_final.winner
+
+        if winner.name in winners.keys():
+            winners[winner.name] += 1
+        else:
+            winners[winner.name] = 1
+            
+    def main(self,n=10):
+        winners ={}
+        [self.simul_one_tournament(winners) for i in range(n)]
+        for key in sorted(winners, key=winners.get, reverse=True):
+            print (key + ": " + str(winners[key]))
+        return(winners)
