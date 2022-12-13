@@ -6,3 +6,4 @@ Bibliography : \
 ** Historical Data about the games : https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017 \
 ** Coding Classes : https://github.com/gbarbalinardo/worldcup-simulator \
 ** Link to the Streamlit App : https://trinhrobin-simulator-world-cup-streamlittournament-dqx8f8.streamlit.app/ 
+** Add a line
